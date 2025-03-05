@@ -51,6 +51,14 @@ namespace SignalR.Tester.Core.Clients
             OnClosed?.Invoke();
         }
 
+        private void OnReceiveMessageText(string userId, string timeStampMessageWasSent)
+        {
+            var timeInMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - long.Parse(timeStampMessageWasSent);
+            var logMessage = $"Received response from {userId} after {timeInMs}";
+            OnLogMessage?.Invoke(new EventMessageInfo(logMessage, MessageType.Info));
+            logger.Info(logMessage);
+        }
+
         public ConnectionStatus ConnectionStatus
         {
             get
@@ -81,6 +89,8 @@ namespace SignalR.Tester.Core.Clients
             token = new CancellationTokenSource();
 
             this.connection.Closed += OnClosedInternal;
+            // Subskrybujemy metodę odbierającą wiadomości od serwera
+            proxy.On<string, string>("receiveMessageText", OnReceiveMessageText);
 
             for (int connectCount = 0; connectCount < 2; connectCount++)
             {
@@ -113,7 +123,6 @@ namespace SignalR.Tester.Core.Clients
             var data = await objectGenerator?.Invoke(clientId);
 
             await proxy.Invoke(method, data);
-
         }
 
         public async Task StopConnection()
